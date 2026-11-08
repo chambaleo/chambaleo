@@ -2,7 +2,7 @@ import { bindings, defineConfig, defineWorker } from "cf/config";
 
 export default defineConfig({
   worker: defineWorker({
-    name: "chambaleo",
+    name: "chambaleo-v2",
     entrypoint: "vinext/server/fetch-handler",
     compatibilityDate: "2026-11-08",
     compatibilityFlags: ["nodejs_compat"],
