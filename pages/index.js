@@ -5,7 +5,7 @@ import { jobs } from "../data/jobs";
 function Logo() {
   return (
     <Link className="brand" href="/" aria-label="Chambaleo, inicio">
-      <img className="brand-mark" src="/leo.png" alt="" />
+      <img className="brand-mark" src="/leo.png" alt="" width="31" height="31" />
       <span>chambaleo<span className="brand-period">.</span></span>
     </Link>
   );

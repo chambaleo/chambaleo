@@ -26,7 +26,7 @@ button { cursor: pointer; }
 .site-header { height: 78px; background: #fff; position: relative; z-index: 2; }
 .header-inner { max-width: 1160px; height: 100%; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-family: "Manrope", sans-serif; font-size: 23px; font-weight: 800; letter-spacing: -1.3px; }
-.brand-mark { width: 31px; height: 31px; display: inline-flex; object-fit: contain; }
+.brand-mark { width: 31px; height: 31px; max-width: 100%; max-height: 100%; display: inline-flex; object-fit: contain; }
 .brand-period { color: #59d4aa; }
 .header-nav { display: flex; align-items: center; gap: 34px; font-size: 13px; font-weight: 600; }
 .nav-link { color: #555b76; transition: color .18s ease; }
@@ -162,6 +162,7 @@ button { cursor: pointer; }
 .publish-page { min-height: calc(100vh - 152px); position: relative; overflow: hidden; display: grid; place-items: center; padding: 55px 24px 90px; background: linear-gradient(128deg, #f8f7ff, #f4fbf8 75%, #f6f5ff); }
 .publish-content { position: relative; z-index: 1; max-width: 600px; text-align: center; }
 .publish-icon { width: 55px; height: 55px; border-radius: 17px; display: grid; place-items: center; margin: 0 auto 23px; color: #6250dd; background: #e8e4ff; font-size: 25px; }
+.publish-logo { display: block; width: 40px; height: 42px; max-width: 100%; max-height: 100%; object-fit: contain; }
 .publish-content h1 { margin: 12px 0; font-family: "Manrope", sans-serif; font-size: clamp(36px, 6vw, 52px); line-height: 1.13; letter-spacing: -2px; }
 .publish-content h1 span { color: #6a55e3; }
 .publish-content > p { max-width: 455px; margin: 0 auto; color: #757a90; font-size: 14px; line-height: 1.8; }
