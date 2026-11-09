@@ -1,0 +1,58 @@
+.submission-page { display: block; min-height: calc(100vh - 152px); padding: 46px 24px 70px; }
+.submission-content { position: relative; z-index: 1; width: min(900px, 100%); margin: 0 auto; }
+.submission-heading { margin: 0 auto 30px; text-align: center; }
+.submission-heading .publish-icon { margin-bottom: 16px; }
+.submission-heading h1 { margin: 9px 0; font-family: "Manrope", sans-serif; font-size: 36px; line-height: 1.16; }
+.submission-heading h1 span { color: #6a55e3; }
+.submission-heading p { max-width: 550px; margin: 0 auto; color: #757a90; font-size: 13px; line-height: 1.7; }
+.submission-unavailable { margin: 0 0 16px; border: 1px solid #efd59b; border-radius: 8px; padding: 13px 15px; background: #fff8e8; color: #775a20; font-size: 12px; line-height: 1.6; }
+.vacancy-form { padding: 8px 30px 28px; border: 1px solid #e9eaf1; border-radius: 12px; background: #fff; box-shadow: 0 12px 35px #25234d0a; }
+.form-section { padding: 25px 0; border-bottom: 1px solid #ececf3; }
+.form-section-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 19px; }
+.form-section-heading > span { width: 29px; height: 29px; flex: 0 0 auto; border-radius: 8px; display: grid; place-items: center; background: #f0edff; color: #6551dc; font-size: 10px; font-weight: 800; }
+.form-section-heading h2 { margin: 0 0 3px; font-family: "Manrope", sans-serif; font-size: 16px; }
+.form-section-heading p { margin: 0; color: #85899d; font-size: 11px; line-height: 1.5; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid-single { grid-template-columns: 1fr; }
+.form-grid-salary { grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: end; }
+.form-field { min-width: 0; display: flex; flex-direction: column; gap: 7px; color: #424760; font-size: 11px; font-weight: 700; }
+.form-field b, .form-check b { color: #de6683; }
+.form-field > span { color: #9296a7; font-size: 9px; font-weight: 500; }
+.form-field input, .form-field select, .form-field textarea { width: 100%; min-width: 0; min-height: 42px; border: 1px solid #dfe1ea; border-radius: 7px; padding: 10px 11px; outline: 0; background: #fff; color: #272c45; font-size: 12px; font-weight: 400; }
+.form-field textarea { min-height: 96px; resize: vertical; line-height: 1.6; }
+.form-field input:focus, .form-field select:focus, .form-field textarea:focus { border-color: #7968e8; box-shadow: 0 0 0 3px #7968e81b; }
+.form-field input[aria-invalid="true"], .form-field select[aria-invalid="true"], .form-field textarea[aria-invalid="true"] { border-color: #d35e7a; }
+.form-field input[type="file"] { padding: 8px; font-size: 10px; }
+.company-logo-preview { width: 72px; height: 72px; max-width: 100%; object-fit: contain; border: 1px solid #e9eaf1; border-radius: 8px; padding: 5px; }
+.field-error { color: #b13d58; font-size: 10px; font-weight: 500; line-height: 1.5; }
+.form-check { display: flex; align-items: flex-start; gap: 9px; color: #60657d; font-size: 11px; line-height: 1.6; }
+.form-check input { width: 16px; height: 16px; flex: 0 0 auto; margin: 1px 0 0; accent-color: #6954e7; }
+.form-check a { color: #6350d7; text-decoration: underline; text-underline-offset: 2px; }
+.form-negotiable { grid-column: 1 / -1; min-height: 32px; align-items: center; }
+.form-negotiable input { margin-top: 0; }
+.application-options { display: flex; flex-wrap: wrap; gap: 9px; margin-bottom: 17px; }
+.application-option { min-height: 38px; border: 1px solid #dfe1ea; border-radius: 7px; padding: 0 12px; display: inline-flex; align-items: center; gap: 7px; color: #555b76; font-size: 11px; cursor: pointer; }
+.application-option.is-selected { border-color: #7968e8; background: #f4f2ff; color: #5540ce; }
+.application-option input { accent-color: #6954e7; }
+.application-value-field { max-width: 470px; }
+.review-notice { margin-top: 16px; border-radius: 7px; padding: 12px 14px; background: #effaf5; color: #397f68; font-size: 11px; line-height: 1.6; }
+.review-notice span { margin-right: 7px; font-weight: 800; }
+.submit-vacancy-button { width: auto; min-width: 280px; margin: 8px auto 0; padding: 0 20px; }
+.submit-vacancy-button:disabled { cursor: not-allowed; opacity: .56; transform: none; }
+.form-footnote { margin: 12px 0 0; color: #85899d; text-align: center; font-size: 10px; line-height: 1.5; }
+
+@media (max-width: 760px) {
+  .submission-page { padding: 35px 18px 48px; }
+  .submission-heading h1 { font-size: 30px; }
+  .vacancy-form { padding: 4px 18px 23px; }
+  .form-grid, .form-grid-salary { grid-template-columns: 1fr; gap: 13px; }
+  .form-negotiable { min-height: 32px; }
+  .form-section { padding: 21px 0; }
+  .submit-vacancy-button { width: 100%; min-width: 0; }
+}
+
+@media (max-width: 410px) {
+  .submission-page { padding-right: 12px; padding-left: 12px; }
+  .vacancy-form { padding-right: 13px; padding-left: 13px; }
+  .application-option { padding: 0 8px; font-size: 10px; }
+}
