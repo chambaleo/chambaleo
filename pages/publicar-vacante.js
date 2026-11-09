@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 function Logo() {
-  return <Link className="brand" href="/" aria-label="Chambaleo, inicio"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M27.3 8.6a13 13 0 1 0 0 18.8" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" /><path d="m20 13 6 5-6 5" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span>chambaleo<span className="brand-period">.</span></span></Link>;
+  return <Link className="brand" href="/" aria-label="Chambaleo, inicio"><img className="brand-mark" src="/leo.png" alt="" /><span>chambaleo<span className="brand-period">.</span></span></Link>;
 }
 
 export default function PublicarVacante() {

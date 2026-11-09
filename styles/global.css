@@ -26,8 +26,7 @@ button { cursor: pointer; }
 .site-header { height: 78px; background: #fff; position: relative; z-index: 2; }
 .header-inner { max-width: 1160px; height: 100%; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; }
 .brand { display: inline-flex; align-items: center; gap: 8px; color: var(--ink); font-family: "Manrope", sans-serif; font-size: 23px; font-weight: 800; letter-spacing: -1.3px; }
-.brand-mark { width: 31px; height: 31px; color: #6954e7; display: inline-flex; }
-.brand-mark svg { width: 100%; height: 100%; }
+.brand-mark { width: 31px; height: 31px; display: inline-flex; object-fit: contain; }
 .brand-period { color: #59d4aa; }
 .header-nav { display: flex; align-items: center; gap: 34px; font-size: 13px; font-weight: 600; }
 .nav-link { color: #555b76; transition: color .18s ease; }
