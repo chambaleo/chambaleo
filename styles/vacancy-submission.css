@@ -24,6 +24,10 @@
 .form-field input[aria-invalid="true"], .form-field select[aria-invalid="true"], .form-field textarea[aria-invalid="true"] { border-color: #d35e7a; }
 .form-field input[type="file"] { padding: 8px; font-size: 10px; }
 .company-logo-preview { width: 72px; height: 72px; max-width: 100%; object-fit: contain; border: 1px solid #e9eaf1; border-radius: 8px; padding: 5px; }
+.company-logo-upload { min-width: 0; display: grid; align-content: start; gap: 7px; }
+.company-logo-preview-wrap { display: flex; align-items: center; gap: 12px; }
+.company-logo-remove { min-height: 34px; border: 1px solid #dfe1ea; border-radius: 6px; padding: 0 10px; background: #fff; color: #5e6379; font-size: 10px; font-weight: 700; }
+.company-logo-remove:hover { border-color: #c9c4e8; color: #5540ce; }
 .field-error { color: #b13d58; font-size: 10px; font-weight: 500; line-height: 1.5; }
 .form-check { display: flex; align-items: flex-start; gap: 9px; color: #60657d; font-size: 11px; line-height: 1.6; }
 .form-check input { width: 16px; height: 16px; flex: 0 0 auto; margin: 1px 0 0; accent-color: #6954e7; }

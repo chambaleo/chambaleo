@@ -1,0 +1,79 @@
+.admin-shell { min-height: 100vh; display: flex; flex-direction: column; background: #fafafe; }
+.admin-header { border-bottom: 1px solid #eeeff4; }
+.admin-header-actions { display: flex; align-items: center; gap: 20px; color: #777c91; font-size: 11px; font-weight: 600; }
+.admin-header-actions button { border: 0; padding: 8px 0; background: transparent; color: #6552da; font-weight: 700; }
+.admin-login-wrap { flex: 1; display: grid; place-items: center; padding: 48px 20px; background: linear-gradient(132deg, #f8f7ff 0%, #f5fbf8 65%, #fff 100%); }
+.admin-login { width: min(420px, 100%); padding: 35px; border: 1px solid #e8e9f0; border-radius: 10px; background: #fff; box-shadow: 0 15px 40px #27234b0c; }
+.admin-login > img { display: block; width: 48px; height: 50px; object-fit: contain; margin: 0 auto 17px; }
+.admin-login .section-kicker { text-align: center; }
+.admin-login h1 { margin: 7px 0; text-align: center; font-family: "Manrope", sans-serif; font-size: 24px; }
+.admin-login > p { margin: 0 0 24px; color: #777c91; text-align: center; font-size: 12px; line-height: 1.65; }
+.admin-login form { display: grid; gap: 15px; }
+.admin-login label { display: grid; gap: 7px; color: #424760; font-size: 11px; font-weight: 700; }
+.admin-login input { width: 100%; min-height: 43px; border: 1px solid #dfe1ea; border-radius: 6px; padding: 0 11px; outline: 0; color: #272c45; font-size: 13px; font-weight: 400; }
+.admin-login input:focus { border-color: #7968e8; box-shadow: 0 0 0 3px #7968e81b; }
+.admin-login .primary-button { margin-top: 3px; }
+.admin-back-link { display: block; margin-top: 20px; color: #6552da; text-align: center; font-size: 11px; font-weight: 700; }
+.admin-loading { flex: 1; display: grid; place-items: center; color: #777c91; font-size: 13px; }
+.admin-content { width: min(1120px, 100%); flex: 1; margin: 0 auto; padding: 46px 24px 60px; }
+.admin-page-heading { display: flex; justify-content: space-between; align-items: end; margin-bottom: 23px; }
+.admin-page-heading h1 { margin: 5px 0 4px; font-family: "Manrope", sans-serif; font-size: 28px; }
+.admin-page-heading p { margin: 0; color: #777c91; font-size: 12px; }
+.admin-total { color: #777c91; font-size: 11px; }
+.admin-tabs { display: flex; gap: 5px; overflow-x: auto; border-bottom: 1px solid #e7e8ee; }
+.admin-tabs button { min-height: 43px; border: 0; border-bottom: 2px solid transparent; padding: 0 13px; display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; background: transparent; color: #6f7489; font-size: 11px; font-weight: 700; }
+.admin-tabs button.is-active { border-bottom-color: #6754e6; color: #5140c6; }
+.admin-tabs button span { min-width: 20px; height: 20px; border-radius: 10px; padding: 0 5px; display: grid; place-items: center; background: #eff0f5; color: #777c91; font-size: 9px; }
+.admin-tabs button.is-active span { background: #eeebff; color: #5140c6; }
+.admin-vacancy-list { display: grid; gap: 10px; margin-top: 14px; }
+.admin-vacancy { border: 1px solid #e7e8ee; border-radius: 8px; background: #fff; }
+.admin-vacancy-main { padding: 17px 19px 14px; }
+.admin-vacancy-title { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-vacancy-title h2 { margin: 0 4px 0 0; font-family: "Manrope", sans-serif; font-size: 15px; line-height: 1.4; }
+.admin-status, .admin-vip { border-radius: 4px; padding: 4px 7px; font-size: 9px; font-weight: 700; }
+.admin-status { background: #f0f1f5; color: #646a7f; }
+.status-pending { background: #fff4dc; color: #97650d; }
+.status-approved { background: #e7f7f0; color: #317b61; }
+.status-rejected { background: #fff0f2; color: #b14c62; }
+.status-expired { background: #eceef2; color: #687083; }
+.admin-vip { background: #f0edff; color: #6350db; }
+.admin-vacancy-meta { display: flex; flex-wrap: wrap; gap: 5px 18px; margin-top: 8px; color: #777c91; font-size: 10px; }
+.admin-vacancy-meta strong { color: #41465d; }
+.admin-vacancy-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+.admin-vacancy-actions button { min-height: 31px; border: 1px solid #e1e2ea; border-radius: 5px; padding: 0 10px; background: #fff; color: #5b6075; font-size: 10px; font-weight: 700; }
+.admin-vacancy-actions button:disabled { opacity: .55; cursor: wait; }
+.admin-vacancy-actions .admin-action-primary { border-color: #6653dd; background: #6653dd; color: #fff; }
+.admin-vacancy-actions .admin-action-danger { color: #b34f64; }
+.admin-vacancy-actions .admin-vip-button { color: #5d4bd0; }
+.admin-vacancy-preview { border-top: 1px solid #ececf2; padding: 16px 19px 18px; color: #60657a; font-size: 11px; line-height: 1.7; }
+.admin-preview-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; padding-bottom: 15px; border-bottom: 1px solid #eff0f4; }
+.admin-preview-grid div { min-width: 0; display: grid; gap: 2px; }
+.admin-preview-grid span { color: #8a8ea0; font-size: 9px; }
+.admin-preview-grid strong { color: #41465d; font-size: 10px; font-weight: 600; overflow-wrap: anywhere; }
+.admin-vacancy-preview section { margin-top: 13px; }
+.admin-vacancy-preview h3 { margin: 0 0 4px; color: #363b53; font-family: "Manrope", sans-serif; font-size: 11px; }
+.admin-vacancy-preview p { margin: 0; white-space: pre-line; }
+.admin-vacancy-preview ul { margin: 2px 0 0; padding-left: 18px; }
+.admin-preview-footer { margin-top: 14px; border-top: 1px solid #eff0f4; padding-top: 10px; overflow-wrap: anywhere; color: #777c91; font-size: 10px; }
+.admin-empty { margin-top: 14px; border: 1px dashed #dedfee; border-radius: 8px; padding: 38px 20px; color: #777c91; text-align: center; font-size: 12px; }
+.admin-alert { border-radius: 6px; padding: 11px 13px; font-size: 11px; line-height: 1.6; }
+.admin-alert-error { border: 1px solid #f0cbd2; background: #fff5f6; color: #a63e55; }
+.admin-login .admin-alert { margin-top: 2px; }
+.admin-content > .admin-alert { margin-bottom: 12px; }
+.admin-footer { width: 100%; }
+
+@media (max-width: 760px) {
+  .admin-content { padding: 34px 18px 48px; }
+  .admin-page-heading { align-items: center; }
+  .admin-preview-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-header-actions { gap: 12px; font-size: 10px; }
+  .admin-login { padding: 27px 22px; }
+}
+
+@media (max-width: 410px) {
+  .admin-content { padding-right: 13px; padding-left: 13px; }
+  .admin-vacancy-main { padding: 14px; }
+  .admin-vacancy-preview { padding-right: 14px; padding-left: 14px; }
+  .admin-vacancy-meta { display: grid; gap: 4px; }
+  .admin-header-actions > span { display: none; }
+}

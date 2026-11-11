@@ -72,6 +72,9 @@ button { cursor: pointer; }
 .featured-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px #26234d12; border-color: #d7d1ff; }
 .featured-card-top { display: flex; align-items: center; justify-content: space-between; }
 .company-logo { width: 41px; height: 41px; border-radius: 11px; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; font-family: "Manrope", sans-serif; font-size: 19px; font-weight: 800; letter-spacing: -1px; text-transform: lowercase; }
+.company-logo { position: relative; overflow: hidden; background: #f0f1f5; color: #85899c; }
+.company-logo-default { width: 55%; height: 55%; }
+.company-logo-image { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #fff; }
 .logo-lilac { color: #5928cc; background: #eee8ff; }
 .logo-yellow { color: #171717; background: #f7dc42; }
 .logo-blue { color: #fff; background: #2463eb; font-size: 12px; letter-spacing: -.5px; }

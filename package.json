@@ -8,6 +8,7 @@
     "start": "next start",
     "dev:vinext": "vite dev --port 3001",
     "build:vinext": "vite build",
+    "test": "node --test",
     "start:vinext": "vite preview",
     "deploy:vinext": "vinext-cloudflare deploy"
   },

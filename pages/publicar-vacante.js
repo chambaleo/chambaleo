@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { detectCompanyLogoMime, MAX_COMPANY_LOGO_BYTES } from "../lib/companyLogo";
 
 const APPLICATION_METHODS = ["email", "whatsapp", "external_url"];
 const EMPLOYMENT_TYPES = ["Tiempo completo", "Medio tiempo", "Temporal", "Prácticas", "Freelance"];
 const EXPERIENCE_LEVELS = ["Sin experiencia", "Junior", "Intermedio", "Senior"];
-const MAX_LOGO_BYTES = 4 * 1024 * 1024;
 const SALARY_PERIODS = ["Mensual", "Semanal", "Diario", "Por hora"];
 const VACANCY_CATEGORIES = [
   "Administración", "Ventas", "Marketing", "Tecnología", "Finanzas", "Educación", "Salud",
@@ -23,8 +23,17 @@ export default function PublicarVacante() {
     salary_period: "Mensual", salary_negotiable: false, description: "", responsibilities: "",
     requirements: "", benefits: "", application_method: "email", application_value: "",
   });
+  const [selectedLogo, setSelectedLogo] = useState(null);
   const [logoPreview, setLogoPreview] = useState("");
   const [errors, setErrors] = useState({});
+  const [consentAccepted, setConsentAccepted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submission, setSubmission] = useState(null);
+  const logoInputRef = useRef(null);
+
+  useEffect(() => () => {
+    if (logoPreview) URL.revokeObjectURL(logoPreview);
+  }, [logoPreview]);
 
   function updateField(event) {
     const { name, value, type, checked } = event.target;
@@ -32,24 +41,81 @@ export default function PublicarVacante() {
     setErrors((current) => ({ ...current, [name]: undefined }));
   }
 
-  function selectLogo(event) {
+  async function selectLogo(event) {
     const file = event.target.files?.[0] || null;
     setErrors((current) => ({ ...current, company_logo: undefined }));
+    setSelectedLogo(null);
     setLogoPreview("");
     if (!file) return;
+    if (file.size > MAX_COMPANY_LOGO_BYTES) {
+      event.target.value = "";
+      setErrors((current) => ({ ...current, company_logo: "El logotipo no puede superar 1 MB." }));
+      return;
+    }
     if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setErrors((current) => ({ ...current, company_logo: "El logotipo debe ser PNG, JPEG o WebP." }));
+      event.target.value = "";
+      setErrors((current) => ({ ...current, company_logo: "El logotipo debe ser PNG, JPG o WEBP." }));
       return;
     }
-    if (file.size > MAX_LOGO_BYTES) {
-      setErrors((current) => ({ ...current, company_logo: "El logotipo no debe superar 4 MB." }));
+    const actualMime = detectCompanyLogoMime(await file.slice(0, 12).arrayBuffer());
+    if (actualMime !== file.type) {
+      event.target.value = "";
+      setErrors((current) => ({ ...current, company_logo: "El contenido del logotipo no coincide con su formato." }));
       return;
     }
+    setSelectedLogo(file);
     setLogoPreview(URL.createObjectURL(file));
+  }
+
+  function removeLogo() {
+    setSelectedLogo(null);
+    setLogoPreview("");
+    setErrors((current) => ({ ...current, company_logo: undefined }));
+    if (logoInputRef.current) logoInputRef.current.value = "";
   }
 
   function fieldError(name) {
     return errors[name] ? <span className="field-error">{errors[name]}</span> : null;
+  }
+
+  async function submitVacancy(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setErrors({});
+    setSubmission(null);
+    try {
+      let companyLogo = null;
+      let logoReadError = null;
+      if (selectedLogo) {
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = () => reject(new Error("No se pudo leer el archivo."));
+            reader.readAsDataURL(selectedLogo);
+          });
+          companyLogo = { mimeType: selectedLogo.type, data: String(dataUrl).split(",")[1] };
+        } catch {
+          logoReadError = "No se pudo leer el logotipo. La vacante se enviará sin él.";
+        }
+      }
+      const response = await fetch("/api/vacantes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...values, consent_accepted: consentAccepted, company_logo: companyLogo }),
+      });
+      const result = await response.json();
+      if (!response.ok) {
+        if (result.fields) setErrors(result.fields);
+        setSubmission({ error: result.error || "No pudimos enviar tu vacante. Inténtalo de nuevo." });
+        return;
+      }
+      setSubmission({ message: result.message, id: result.id, logoError: result.logoError || logoReadError });
+    } catch {
+      setSubmission({ error: "No se pudo conectar con Chambaleo. Revisa tu conexión e inténtalo de nuevo." });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -66,18 +132,22 @@ export default function PublicarVacante() {
             <p>Sin registro ni costo inicial. Todas las vacantes se revisan antes de publicarse.</p>
           </div>
 
-          <div className="submission-unavailable" role="status">
-            La recepción de vacantes todavía no está disponible. Estamos preparando el proceso de revisión; por ahora, la información de este formulario no se envía ni se guarda.
-          </div>
+          {submission && <div className={`submission-unavailable${submission.error ? " submission-error" : " submission-success"}`} role="status">
+            {submission.error || <>{submission.message} Tu folio es <strong>{submission.id}</strong>.{submission.logoError && <><br />{submission.logoError}</>}</>}
+          </div>}
 
-          <form className="vacancy-form" onSubmit={(event) => event.preventDefault()} noValidate>
+          <form className="vacancy-form" onSubmit={submitVacancy} noValidate>
             <section className="form-section">
               <div className="form-section-heading"><span>01</span><div><h2>Datos de la empresa</h2><p>Cuéntanos quién está contratando.</p></div></div>
               <div className="form-grid">
                 <label className="form-field">Nombre de la empresa <b>*</b><input name="company_name" value={values.company_name} onChange={updateField} maxLength="120" autoComplete="organization" aria-invalid={Boolean(errors.company_name)} />{fieldError("company_name")}</label>
                 <label className="form-field">Correo electrónico de contacto <b>*</b><input type="email" name="company_email" value={values.company_email} onChange={updateField} maxLength="254" autoComplete="email" aria-invalid={Boolean(errors.company_email)} />{fieldError("company_email")}</label>
                 <label className="form-field">Teléfono / WhatsApp <span>Opcional</span><input type="tel" name="company_phone" value={values.company_phone} onChange={updateField} maxLength="32" autoComplete="tel" aria-invalid={Boolean(errors.company_phone)} />{fieldError("company_phone")}</label>
-                <label className="form-field">Logotipo <span>PNG, JPEG o WebP · máximo 4 MB</span><input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectLogo} aria-invalid={Boolean(errors.company_logo)} />{logoPreview && <img className="company-logo-preview" src={logoPreview} alt="Vista previa del logotipo" />}{fieldError("company_logo")}</label>
+                <div className="company-logo-upload">
+                  <label className="form-field" htmlFor="company-logo">Logotipo <span>Opcional · PNG, JPG o WEBP · máximo 1 MB</span><input ref={logoInputRef} id="company-logo" type="file" accept="image/png,image/jpeg,image/webp,.jpg,.jpeg" onChange={selectLogo} aria-invalid={Boolean(errors.company_logo)} /></label>
+                  {logoPreview && <div className="company-logo-preview-wrap"><img className="company-logo-preview" src={logoPreview} alt="Vista previa del logotipo de la empresa" /><button className="company-logo-remove" type="button" onClick={removeLogo}>Quitar logotipo</button></div>}
+                  {fieldError("company_logo")}
+                </div>
               </div>
             </section>
 
@@ -125,15 +195,15 @@ export default function PublicarVacante() {
 
             <section className="form-section form-consent-section">
               <div className="form-section-heading"><span>06</span><div><h2>Consentimiento</h2><p>La vacante no será pública hasta que nuestro equipo la apruebe.</p></div></div>
-              <label className="form-check"><input type="checkbox" name="consent_accepted" aria-invalid={Boolean(errors.consent_accepted)} /><span>Acepto el <Link href="/aviso-de-privacidad">aviso de privacidad</Link> y los <Link href="/terminos-de-uso">términos de uso</Link>. Confirmo que cuento con autorización para publicar esta información. <b>*</b></span></label>
+              <label className="form-check"><input type="checkbox" name="consent_accepted" checked={consentAccepted} onChange={(event) => { setConsentAccepted(event.target.checked); setErrors((current) => ({ ...current, consent_accepted: undefined })); }} aria-invalid={Boolean(errors.consent_accepted)} /><span>Acepto el <Link href="/aviso-de-privacidad">aviso de privacidad</Link> y los <Link href="/terminos-de-uso">términos de uso</Link>. Confirmo que cuento con autorización para publicar esta información. <b>*</b></span></label>
               {fieldError("consent_accepted")}
               <div className="review-notice"><span>✓</span> Todas las vacantes se revisan antes de publicarse. Enviaremos cualquier seguimiento al correo de contacto.</div>
             </section>
 
-            <button className="primary-button submit-vacancy-button" type="submit" disabled>
-              Envío no disponible aún
+            <button className="primary-button submit-vacancy-button" type="submit" disabled={submitting || Boolean(submission && !submission.error)}>
+              {submitting ? "Enviando vacante…" : submission && !submission.error ? "Vacante enviada" : "Enviar vacante"}
             </button>
-            <p className="form-footnote">No envíes datos personales o de contacto hasta que la recepción de vacantes esté habilitada.</p>
+            <p className="form-footnote">Tu vacante permanecerá privada hasta que nuestro equipo la apruebe.</p>
           </form>
         </div>
       </main>

@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { jobs } from "../data/jobs";
 
 function Logo() {
   return (
@@ -27,7 +26,10 @@ function Icon({ name, size = 20 }) {
 }
 
 function JobLogo({ job, large = false }) {
-  return <span className={`company-logo logo-${job.color}${large ? " company-logo-large" : ""}`}>{job.logo}</span>;
+  return <span className={`company-logo${large ? " company-logo-large" : ""}`}>
+    <svg className="company-logo-default" aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M9 21v-4h6v4M8 7h1m6 0h1M8 11h1m6 0h1" /></svg>
+    {job.logoUrl && <img className="company-logo-image" src={job.logoUrl} alt={`${job.company}`} />}
+  </span>;
 }
 
 function FeaturedCard({ job }) {
@@ -64,10 +66,32 @@ function JobRow({ job }) {
 }
 
 export default function Home() {
+  const [jobs, setJobs] = useState([]);
+  const [loadingJobs, setLoadingJobs] = useState(true);
+  const [jobsError, setJobsError] = useState(false);
   const [title, setTitle] = useState("");
   const [company, setCompany] = useState("");
   const [city, setCity] = useState("");
   const [search, setSearch] = useState({ title: "", company: "", city: "" });
+  useEffect(() => {
+    let active = true;
+    fetch("/api/vacantes")
+      .then(async (response) => {
+        const result = await response.json();
+        if (!response.ok) throw new Error(result.error);
+        return result;
+      })
+      .then((vacancies) => {
+        if (active) setJobs(Array.isArray(vacancies) ? vacancies : []);
+      })
+      .catch(() => {
+        if (active) setJobsError(true);
+      })
+      .finally(() => {
+        if (active) setLoadingJobs(false);
+      });
+    return () => { active = false; };
+  }, []);
   const filteredJobs = useMemo(() => jobs.filter((job) => {
     const matches = (value, query) => !query || value.toLowerCase().includes(query.toLowerCase());
     return matches(job.title, search.title) && matches(job.company, search.company) && matches(job.city, search.city);
@@ -136,7 +160,7 @@ export default function Home() {
             <a className="see-all" href="#todas">Ver todas las vacantes <Icon name="arrow" size={18} /></a>
           </div>
 
-          {filteredFeatured.length ? (
+          {loadingJobs ? <div className="empty-featured">Cargando vacantes VIP…</div> : jobsError ? <div className="empty-featured">No fue posible cargar las vacantes. Inténtalo de nuevo más tarde.</div> : filteredFeatured.length ? (
             <div className="featured-grid">{filteredFeatured.map((job) => <FeaturedCard key={job.id} job={job} />)}</div>
           ) : (
             <div className="empty-featured">No encontramos vacantes VIP con esos filtros. Prueba con otra búsqueda.</div>
@@ -150,7 +174,7 @@ export default function Home() {
             <span className="result-count">{filteredJobs.length} vacantes</span>
           </div>
           <div className="job-list">
-            {regularJobs.length ? regularJobs.map((job) => <JobRow key={job.id} job={job} />) : (
+            {loadingJobs ? <div className="empty-jobs">Cargando vacantes…</div> : regularJobs.length ? regularJobs.map((job) => <JobRow key={job.id} job={job} />) : (
               <div className="empty-jobs">No encontramos empleos recientes con esos filtros.</div>
             )}
           </div>
