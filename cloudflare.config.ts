@@ -25,6 +25,8 @@ export default defineConfig({
 
       NEXT_PUBLIC_SUPABASE_URL: bindings.secret(),
       NEXT_PUBLIC_SUPABASE_ANON_KEY: bindings.secret(),
+      SUPABASE_URL: bindings.secret(),
+      SUPABASE_SERVICE_ROLE_KEY: bindings.secret(),
     },
   }),
 });
