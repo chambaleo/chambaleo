@@ -10,7 +10,14 @@ export function getJobBotDatabase() {
     );
   }
 
-  return createClient(url, key, {
+  const parsed = new URL(url.trim());
+  if (parsed.protocol !== "https:" || !parsed.hostname.endsWith(".supabase.co")) {
+    throw new Error("Invalid Supabase project URL");
+  }
+  if (!["/", "/rest/v1", "/rest/v1/"].includes(parsed.pathname)) {
+    throw new Error("Unexpected Supabase URL path: " + parsed.pathname);
+  }
+  return createClient(parsed.origin, key, {
     auth: {
       autoRefreshToken: false,
       persistSession: false
