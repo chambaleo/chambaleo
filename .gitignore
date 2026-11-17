@@ -4,3 +4,5 @@
 /dist/
 .vinext/
 .cloudflare/
+
+/scripts/job-bot/output/
