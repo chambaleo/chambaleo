@@ -6,8 +6,33 @@ import { validateVacancySubmission } from "../../lib/vacancyValidation";
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT = 5;
 const submissionsByIp = new Map();
+const EXTERNAL_VACANCY_FIELDS = "id, company_name, job_title, location, work_mode, application_url";
 
 export const config = { api: { bodyParser: { sizeLimit: "2mb" } } };
+
+function isHttpsApplicationUrl(value) {
+  if (typeof value !== "string" || !value.trim()) return false;
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
+function toPublicExternalVacancy(row) {
+  if (!isHttpsApplicationUrl(row.application_url)) return null;
+  return toPublicVacancy({
+    id: row.id,
+    company_name: row.company_name,
+    job_title: row.job_title,
+    city: row.location,
+    work_mode: row.work_mode,
+    application_method: "external_url",
+    application_value: row.application_url,
+    is_vip: false,
+  });
+}
 
 async function toPublicVacancyWithLogo(supabase, row) {
   const path = row.company_logo_url;
@@ -57,9 +82,28 @@ export default async function handler(req, res) {
       const { data, error } = await query;
       if (error) throw error;
       const rows = (data || []).filter((row) => isUnexpired(row));
-      if (req.query.id && rows.length === 0) return res.status(404).json({ error: "Esta vacante ya no está disponible." });
+      if (req.query.id && rows.length === 0) {
+        const { data: external, error: externalError } = await supabase
+          .from("external_vacancies")
+          .select(EXTERNAL_VACANCY_FIELDS)
+          .eq("id", req.query.id)
+          .eq("is_active", true)
+          .maybeSingle();
+        if (externalError) throw externalError;
+        const vacancy = external && toPublicExternalVacancy(external);
+        if (!vacancy) return res.status(404).json({ error: "Esta vacante ya no está disponible." });
+        return res.status(200).json(vacancy);
+      }
       const vacancies = await Promise.all(rows.map((row) => toPublicVacancyWithLogo(supabase, row)));
-      return res.status(200).json(req.query.id ? vacancies[0] : vacancies);
+      if (req.query.id) return res.status(200).json(vacancies[0]);
+      const { data: externalRows, error: externalError } = await supabase
+        .from("external_vacancies")
+        .select(EXTERNAL_VACANCY_FIELDS)
+        .eq("is_active", true)
+        .order("last_seen_at", { ascending: false });
+      if (externalError) throw externalError;
+      const externalVacancies = (externalRows || []).map(toPublicExternalVacancy).filter(Boolean);
+      return res.status(200).json([...vacancies, ...externalVacancies]);
     } catch {
       return res.status(503).json({ error: "No fue posible cargar las vacantes en este momento." });
     }

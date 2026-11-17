@@ -1,0 +1,34 @@
+name: Chambaleo Job Bot
+
+on:
+  schedule:
+    - cron: "0 9 * * *"
+  workflow_dispatch:
+    inputs:
+      write:
+        description: "Guardar en Supabase después de validar la descarga"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Validate sources (dry run)
+        run: node scripts/job-bot/import.mjs
+      - name: Write validated jobs to Supabase
+        if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.write)
+        run: node scripts/job-bot/import.mjs --write
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
