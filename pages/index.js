@@ -95,7 +95,7 @@ export default function Home() {
   const filteredJobs = useMemo(() => jobs.filter((job) => {
     const matches = (value, query) => !query || value.toLowerCase().includes(query.toLowerCase());
     return matches(job.title, search.title) && matches(job.company, search.company) && matches(job.city, search.city);
-  }), [search]);
+  }), [jobs, search]);
   const filteredFeatured = filteredJobs.filter((job) => job.featured);
   const regularJobs = filteredJobs.filter((job) => !job.featured);
 
