@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 
 export const SOURCES = [
   { source: "greenhouse:clara", platform: "greenhouse", companyName: "Clara", board: "clara" },
-  { source: "lever:kavak", platform: "lever", companyName: "Kavak", board: "kavak" }
+  // Kavak temporarily disabled: Lever API failed
 ];
 
 const MEXICO_LOCATION = /\b(?:mexico|cdmx|ciudad de mexico|mexico city|guadalajara|monterrey|jalisco|nuevo leon|queretaro|puebla|toluca|tijuana|merida|yucatan|oaxaca|chihuahua|guanajuato|san luis potosi|aguascalientes|morelia|michoacan|hermosillo|sonora|saltillo|coahuila|veracruz|tabasco|chiapas|durango|zacatecas|campeche|colima|nayarit|sinaloa|tamaulipas|tlaxcala|hidalgo|guerrero|baja california(?: sur)?|quintana roo|estado de mexico)\b/i;
