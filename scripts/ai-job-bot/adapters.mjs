@@ -67,7 +67,7 @@ async function getJoaJson(fetchImpl, url, key) {
     throw new Error(`JOA API HTTP ${response.status}${detail ? ` ${detail}` : ""}${quota}${retry}`);
   }
   try {
-    return await response.json();
+    return { body: await response.json(), headers: response.headers };
   } catch {
     throw new Error("JOA API returned invalid JSON");
   }
@@ -83,9 +83,12 @@ async function getJoaEstimate(fetchImpl, key) {
   const url = new URL(`${JOA_API}/v1/me/export-estimate`);
   url.searchParams.set("country", "MX");
   url.searchParams.set("source_type", "ats,career_site");
-  const estimate = await getJoaJson(fetchImpl, url, key);
+  const { body: estimate } = await getJoaJson(fetchImpl, url, key);
   if (!Number.isInteger(estimate?.remaining_this_month) || estimate.remaining_this_month < -1) {
     throw new Error("JOA API returned an invalid monthly records estimate");
+  }
+  if (estimate.remaining_this_month === -1 && estimate.remaining_unlimited !== true) {
+    throw new Error("JOA API did not identify an unlimited monthly allowance");
   }
   return {
     estimatedRows: Number.isInteger(estimate.estimated_rows) ? estimate.estimated_rows : null,
@@ -102,7 +105,7 @@ async function fetchJoaExitFeed(fetchImpl, kind, initialSince, key, limit) {
     if (kind === "withdrawn") url.searchParams.set("country", "MX");
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("since", since);
-    const page = await getJoaJson(fetchImpl, url, key);
+    const { body: page } = await getJoaJson(fetchImpl, url, key);
     if (!Array.isArray(page?.data) || !Number.isInteger(page.count) || typeof page.next_since !== "string") {
       throw new Error(`JOA ${kind} feed returned an invalid page`);
     }
@@ -143,66 +146,63 @@ export async function fetchJoaExitFeeds(fetchImpl = fetch, {
   return { expired, withdrawn };
 }
 
-export async function fetchJoaChanges(fetchImpl = fetch, { since, maxRecords = 420, pageSize = 500 } = {}) {
-  const key = process.env.JOA_API_KEY;
-  if (typeof key !== "string" || !key.trim()) {
-    throw new Error("JOA_API_KEY is not set; configure it as a server-side environment secret");
+export function calculateJoaBudget({
+  maxRecords,
+  remaining,
+  unlimited = false,
+  quotaUsed = 0,
+  monthlyLimit = 1000,
+  reserve = 100,
+}) {
+  for (const [label, value] of Object.entries({ maxRecords, quotaUsed, monthlyLimit, reserve })) {
+    if (!Number.isInteger(value) || value < 0) throw new Error(`JOA ${label} must be a non-negative integer`);
   }
-  if (typeof since !== "string" || !since) throw new Error("A persisted JOA changes cursor is required");
-  if (!Number.isInteger(maxRecords) || maxRecords < 1) throw new Error("JOA record budget must be a positive integer");
-  if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 5000) {
-    throw new Error("JOA changes page size must be from 1 to 5000");
+  if (maxRecords < 1 || monthlyLimit < 1 || reserve >= monthlyLimit) {
+    throw new Error("JOA record limits are invalid");
   }
-
-  const estimate = await getJoaEstimate(fetchImpl, key.trim());
-  const budget = estimate.unlimited ? maxRecords : Math.min(maxRecords, estimate.remaining);
-  const changes = [];
-  let nextSince = since;
-  let hasMore = budget === 0;
-  while (changes.length < budget) {
-    const limit = Math.min(pageSize, budget - changes.length);
-    const url = new URL(`${JOA_API}/v1/changes`);
-    url.searchParams.set("country", "MX");
-    url.searchParams.set("limit", String(limit));
-    url.searchParams.set("since", nextSince);
-    const page = await getJoaJson(fetchImpl, url, key.trim());
-    if (!Array.isArray(page?.data) || !Number.isInteger(page.count) || typeof page.next_since !== "string") {
-      throw new Error("JOA changes feed returned an invalid page");
-    }
-    if (page.count !== page.data.length || page.data.length > limit) {
-      throw new Error("JOA changes feed count did not match its page");
-    }
-    if (page.count > 0 && page.next_since === nextSince) {
-      throw new Error("JOA changes feed repeated its pagination cursor");
-    }
-    changes.push(...page.data);
-    nextSince = page.next_since;
-    hasMore = page.count === limit;
-    if (!hasMore) break;
+  if (!unlimited && (!Number.isInteger(remaining) || remaining < 0)) {
+    throw new Error("JOA remaining monthly records are invalid");
   }
-  return {
-    changes,
-    nextSince,
-    quota: { ...estimate, budget, fetched: changes.length, capped: hasMore },
-  };
+  const reportedRemaining = unlimited ? monthlyLimit : remaining;
+  const locallyAvailable = Math.max(0, monthlyLimit - quotaUsed);
+  const remainingAfterReserve = Math.max(0, Math.min(reportedRemaining, locallyAvailable) - reserve);
+  return Math.min(maxRecords, remainingAfterReserve);
 }
 
-async function fetchJoaJobs(fetchImpl, source, { maxRecords = 420 } = {}) {
+async function fetchJoaJobs(fetchImpl, source, {
+  listedAfter,
+  cursor = null,
+  maxRecords = 10,
+  fallbackMaxRecords = 10,
+  quotaUsed = 0,
+  monthlyLimit = 1000,
+  reserve = 100,
+} = {}) {
   assertJoaSource(source);
   const key = process.env.JOA_API_KEY;
   if (typeof key !== "string" || !key.trim()) {
     throw new Error("JOA_API_KEY is not set; configure it as a server-side environment secret");
   }
-  if (!Number.isInteger(maxRecords) || maxRecords < 1) {
-    throw new Error("JOA record budget must be a positive integer");
+  if (typeof listedAfter !== "string" || !listedAfter || Number.isNaN(Date.parse(listedAfter))) {
+    throw new Error("A persisted JOA listed_after timestamp is required");
   }
   const estimate = await getJoaEstimate(fetchImpl, key.trim());
-  const budget = estimate.unlimited ? maxRecords : Math.min(maxRecords, estimate.remaining);
+  const safeBudget = calculateJoaBudget({
+    maxRecords: monthlyLimit,
+    remaining: estimate.remaining,
+    unlimited: estimate.unlimited,
+    quotaUsed,
+    monthlyLimit,
+    reserve,
+  });
+  const requestedBudget = maxRecords > fallbackMaxRecords && safeBudget < maxRecords
+    ? fallbackMaxRecords
+    : maxRecords;
+  const budget = Math.min(requestedBudget, safeBudget);
   const jobs = [];
-  let cursor = null;
+  let nextCursor = cursor;
   let hasMore = true;
-  let totalEstimate = null;
-  let totalEstimateStatus = null;
+  let recordsCharged = 0;
 
   while (jobs.length < budget) {
     const pageSize = Math.min(JOA_MAX_PAGE_SIZE, budget - jobs.length);
@@ -211,18 +211,17 @@ async function fetchJoaJobs(fetchImpl, source, { maxRecords = 420 } = {}) {
     url.searchParams.set("status", "live");
     url.searchParams.set("source_type", "ats,career_site");
     url.searchParams.set("limit", String(pageSize));
-    if (cursor) url.searchParams.set("cursor", cursor);
-    else url.searchParams.set("include_total", "true");
+    url.searchParams.set("listed_after", listedAfter);
+    if (nextCursor) url.searchParams.set("cursor", nextCursor);
 
-    const page = await getJoaJson(fetchImpl, url, key.trim());
+    const { body: page, headers } = await getJoaJson(fetchImpl, url, key.trim());
     if (!Array.isArray(page?.data) || typeof page.has_more !== "boolean") {
       throw new Error("JOA API returned an invalid jobs page");
     }
     if (page.data.length > pageSize) throw new Error("JOA API exceeded the requested page size");
-    if (cursor === null) {
-      totalEstimate = Number.isInteger(page.total_estimate) ? page.total_estimate : null;
-      totalEstimateStatus = page.total_estimate_status || null;
-    }
+    const chargedHeader = headers?.get?.("X-JOA-Records-Charged");
+    const charged = chargedHeader === null || chargedHeader === undefined ? null : Number(chargedHeader);
+    recordsCharged += Number.isInteger(charged) && charged >= 0 ? charged : page.data.length;
     hasMore = page.has_more;
     for (const job of page.data) {
       if (!job || typeof job.id !== "string" || !job.id.trim()) {
@@ -234,19 +233,20 @@ async function fetchJoaJobs(fetchImpl, source, { maxRecords = 420 } = {}) {
     if (typeof page.next_cursor !== "string" || !page.next_cursor) {
       throw new Error("JOA API indicated more jobs without a next_cursor");
     }
-    if (page.next_cursor === cursor) throw new Error("JOA API repeated its pagination cursor");
-    cursor = page.next_cursor;
+    if (page.next_cursor === nextCursor) throw new Error("JOA API repeated its pagination cursor");
+    nextCursor = page.next_cursor;
   }
 
   return {
     jobs,
+    nextCursor: hasMore ? nextCursor : null,
+    hasMore,
     quota: {
       ...estimate,
       budget,
       fetched: jobs.length,
+      recordsCharged,
       capped: hasMore,
-      totalEstimate,
-      totalEstimateStatus,
     },
   };
 }
