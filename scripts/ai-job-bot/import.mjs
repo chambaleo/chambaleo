@@ -1,11 +1,10 @@
-import { appendFile, readFile, rename, writeFile } from "node:fs/promises";
+import { appendFile, readFile } from "node:fs/promises";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { getJobBotDatabase } from "../job-bot/supabase.mjs";
-import { createAdapters, fetchJoaChanges, fetchJoaExitFeeds } from "./adapters.mjs";
+import { createAdapters } from "./adapters.mjs";
 
 const SOURCES_PATH = new URL("./sources.json", import.meta.url);
 const DEFAULT_AUDIT_PATH = new URL("./audit.jsonl", import.meta.url);
-const DEFAULT_STATE_PATH = new URL("./joa-state.json", import.meta.url);
 const DEFAULT_TARGET = 420;
 const OVERALL_TARGET = 500;
 const JOA_SOURCE = "jobopportunitiesapi:joa";
@@ -185,7 +184,7 @@ function getJobFields(source, job) {
   };
 }
 
-function normalizeJob(source, job) {
+export function normalizeJob(source, job) {
   if (source.ats === "joa") {
     const fields = getJobFields(source, job);
     if (!fields) return { status: "outside-mexico" };
@@ -232,7 +231,7 @@ function normalizeJob(source, job) {
   };
 }
 
-function deduplicateJobs(results) {
+export function deduplicateJobs(results) {
   const seenUrls = new Set();
   const seenContent = new Set();
   for (const result of results) {
@@ -261,7 +260,7 @@ async function readAllRows(database, table, columns, configure = (query) => quer
   }
 }
 
-async function readExistingVacancies(database) {
+export async function readExistingVacancies(database) {
   const now = new Date().toISOString();
   const [external, manual] = await Promise.all([
     readAllRows(database, "external_vacancies", "id,source,external_job_id,application_url", (query) => query.eq("is_active", true)),
@@ -309,7 +308,7 @@ async function readExistingVacancies(database) {
   };
 }
 
-function deduplicateAgainstExisting(jobs, existing, updatingIds = new Set()) {
+export function deduplicateAgainstExisting(jobs, existing, updatingIds = new Set()) {
   if (!existing) return jobs;
   const seenIds = new Set(existing.ids);
   return jobs.filter((job) => {
@@ -323,7 +322,7 @@ function deduplicateAgainstExisting(jobs, existing, updatingIds = new Set()) {
   });
 }
 
-async function readSources(path = SOURCES_PATH) {
+export async function readSources(path = SOURCES_PATH) {
   const parsed = JSON.parse(await readFile(path, "utf8"));
   if (!Array.isArray(parsed)) throw new Error("sources.json must contain an array");
   return parsed;
@@ -348,32 +347,7 @@ async function readPreviousAudit(auditPath) {
   }
 }
 
-async function readSyncState(statePath) {
-  try {
-    const state = JSON.parse(await readFile(statePath, "utf8"));
-    if (
-      typeof state?.expired_since !== "string" ||
-      typeof state?.withdrawn_since !== "string" ||
-      !state.expired_since ||
-      !state.withdrawn_since
-    ) {
-      throw new Error("JOA state file must contain expired_since and withdrawn_since cursors");
-    }
-    return state;
-  } catch (error) {
-    if (error.code === "ENOENT") return null;
-    throw error;
-  }
-}
-
-async function writeSyncState(statePath, state) {
-  const path = fileURLToPath(statePath);
-  const temporaryPath = `${path}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(state, null, 2)}\n`, "utf8");
-  await rename(temporaryPath, path);
-}
-
-async function writeJobs(database, jobs) {
+export async function writeJobs(database, jobs) {
   for (let offset = 0; offset < jobs.length; offset += 100) {
     const batch = jobs.slice(offset, offset + 100).map((job) => {
       return { ...job, is_active: true, last_seen_at: new Date().toISOString() };
@@ -414,15 +388,12 @@ export async function runSync({
   write = false,
   database,
   auditPath = DEFAULT_AUDIT_PATH,
-  statePath = DEFAULT_STATE_PATH,
   target = DEFAULT_TARGET,
   maxRecords = target,
 } = {}) {
   const configuredSources = sources || (await readSources());
   if (!Number.isInteger(target) || target < 1) throw new Error("Target must be a positive integer");
   if (!Number.isInteger(maxRecords) || maxRecords < 1) throw new Error("Maximum JOA records must be a positive integer");
-  const syncStartedAt = new Date().toISOString();
-  const priorState = await readSyncState(statePath);
   const previousAudit = await readPreviousAudit(auditPath);
   const results = [];
   let existing = null;
@@ -532,20 +503,6 @@ export async function runSync({
     auditRecord(result.source, previousAudit.get(getSourceKey(result.source)), result, timestamp),
   );
   await appendFile(auditPath, `${audit.map((item) => JSON.stringify(item)).join("\n")}\n`, "utf8");
-  if (
-    write &&
-    !results.some((item) => item.source.ats === "joa" && item.status === "write-failed") &&
-    results.some((item) => item.source.ats === "joa" && ["success", "capped"].includes(item.status))
-  ) {
-    const cursor = priorState?.expired_since || syncStartedAt;
-    await writeSyncState(statePath, {
-      expired_since: cursor,
-      withdrawn_since: priorState?.withdrawn_since || syncStartedAt,
-      changes_since: priorState?.changes_since || syncStartedAt,
-      seeded_at: priorState?.seeded_at || syncStartedAt,
-    });
-  }
-
   const uniqueCount = results.reduce((sum, item) => sum + item.uniqueCount, 0);
   console.log(`AI Job Bot: ${uniqueCount}/${target} additional active unique-job target`);
   if (existing) {
@@ -567,7 +524,7 @@ export async function runSync({
   return { results, audit, uniqueCount, target };
 }
 
-async function deactivateJobs(database, ids) {
+export async function deactivateJobs(database, ids) {
   for (let offset = 0; offset < ids.length; offset += 100) {
     const { error } = await database
       .from("external_vacancies")
@@ -577,60 +534,6 @@ async function deactivateJobs(database, ids) {
       .in("external_job_id", ids.slice(offset, offset + 100));
     if (error) throw new Error(`Could not deactivate expired JOA jobs: ${error.message}`);
   }
-}
-
-export async function runExpirationSync({
-  fetchImpl = fetch,
-  database,
-  write = false,
-  since,
-  statePath = DEFAULT_STATE_PATH,
-  auditPath = DEFAULT_AUDIT_PATH,
-  pageSize = 1000,
-} = {}) {
-  const priorState = await readSyncState(statePath);
-  const firstCursor = priorState?.expired_since || since;
-  const secondCursor = priorState?.withdrawn_since || since;
-  if (!firstCursor || !secondCursor) {
-    throw new Error("No JOA exit-feed cursors found. Use --since RFC3339 on the first expiration sync.");
-  }
-  const feeds = await fetchJoaExitFeeds(fetchImpl, {
-    expiredSince: firstCursor,
-    withdrawnSince: secondCursor,
-    limit: pageSize,
-  });
-  const ids = [...new Set([...feeds.expired.ids, ...feeds.withdrawn.ids])];
-  if (write) {
-    if (!database) database = getJobBotDatabase();
-    await deactivateJobs(database, ids);
-    await writeSyncState(statePath, {
-      expired_since: feeds.expired.nextSince,
-      withdrawn_since: feeds.withdrawn.nextSince,
-      changes_since: priorState?.changes_since || since,
-      seeded_at: priorState?.seeded_at || since || new Date().toISOString(),
-    });
-  }
-
-  const result = {
-    expiredCount: feeds.expired.ids.length,
-    withdrawnCount: feeds.withdrawn.ids.length,
-    uniqueExitCount: ids.length,
-    status: write ? "written" : "dry-run",
-  };
-  await appendFile(auditPath, `${JSON.stringify({
-    timestamp: new Date().toISOString(),
-    source_key: getSourceKey({ company: "Job Opportunities API", ats: "joa" }),
-    status: result.status,
-    expired_count: result.expiredCount,
-    withdrawn_count: result.withdrawnCount,
-    unique_exit_count: result.uniqueExitCount,
-    expired_cursor: feeds.expired.nextSince,
-    withdrawn_cursor: feeds.withdrawn.nextSince,
-  })}\n`, "utf8");
-  console.log(`JOA expiration check: ${result.expiredCount} closed + ${result.withdrawnCount} withdrawn IDs; ${result.uniqueExitCount} unique.`);
-  console.log("The provider documents these ID-only feeds as zero-record calls.");
-  if (!write) console.log("DRY RUN: no Supabase changes and no cursor advancement; use --write explicitly after review.");
-  return result;
 }
 
 export async function runChangeSync({
@@ -751,42 +654,28 @@ export async function listPendingSources(sources) {
 
 function parseArgs(args) {
   let write = false;
-  let expire = false;
-  let changes = false;
-  let since;
   let target = DEFAULT_TARGET;
   let maxRecords = DEFAULT_TARGET;
   for (let index = 0; index < args.length; index += 1) {
     if (args[index] === "--write") write = true;
     else if (args[index] === "--dry-run") write = false;
-    else if (args[index] === "--expire") expire = true;
-    else if (args[index] === "--changes") changes = true;
-    else if (args[index] === "--since" && args[index + 1]) since = args[++index];
     else if (args[index] === "--target" && /^\d+$/.test(args[index + 1] || "")) {
       target = Number(args[++index]);
       if (maxRecords === DEFAULT_TARGET) maxRecords = target;
     } else if (args[index] === "--max-records" && /^\d+$/.test(args[index + 1] || "")) {
       maxRecords = Number(args[++index]);
     } else {
-      throw new Error("Usage: node scripts/ai-job-bot/import.mjs [--dry-run | --write] [--target N] [--max-records N] [--expire | --changes [--since RFC3339]]");
+      throw new Error("Usage: node scripts/ai-job-bot/import.mjs [--dry-run | --write] [--target N] [--max-records N]");
     }
   }
   if (target < 1 || maxRecords < 1) throw new Error("--target and --max-records must be positive integers");
-  if ((expire && changes) || (since && !expire && !changes)) {
-    throw new Error("--since requires exactly one of --expire or --changes");
-  }
-  return { write, expire, changes, since, target, maxRecords };
+  return { write, target, maxRecords };
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   try {
     const options = parseArgs(process.argv.slice(2));
-    const run = options.expire
-      ? runExpirationSync(options)
-      : options.changes
-        ? runChangeSync(options)
-        : runSync(options);
-    run.catch((error) => {
+    runSync(options).catch((error) => {
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     });
