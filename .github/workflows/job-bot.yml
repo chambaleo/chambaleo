@@ -10,6 +10,11 @@ on:
         required: false
         type: boolean
         default: false
+      joa_dry_run:
+        description: "Validar JOA (consulta de solo lectura; hasta 420 registros)"
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -24,6 +29,13 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Validate JOA feed (read-only dry run)
+        if: github.event_name == 'workflow_dispatch' && inputs.joa_dry_run
+        run: node scripts/ai-job-bot/import.mjs --dry-run --target 420 --max-records 420
+        env:
+          JOA_API_KEY: ${{ secrets.JOA_API_KEY }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - name: Validate sources (dry run)
         run: node scripts/job-bot/import.mjs
       - name: Write validated jobs to Supabase

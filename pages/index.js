@@ -185,7 +185,7 @@ export default function Home() {
           </div>
         </section>
       </main>
-      <footer className="site-footer"><Logo /><span>Hecho para que encuentres tu siguiente gran oportunidad. <b>♥</b></span><small>© 2026 Chambaleo · México</small></footer>
+      <footer className="site-footer"><Logo /><span>Hecho para que encuentres tu siguiente gran oportunidad. <b>♥</b></span>{jobs.some((job) => job.dataAttribution) && <small><a href="https://jobopportunitiesapi.org" target="_blank" rel="noreferrer">Data: Job Opportunities API</a></small>}<small>© 2026 Chambaleo · México</small></footer>
     </>
   );
 }
