@@ -39,7 +39,7 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
   joa-sync:
-    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.joa_dry_run)
+    if: (github.event_name == 'schedule' && vars.JOA_SYNC_ENABLED == 'true') || (github.event_name == 'workflow_dispatch' && inputs.joa_dry_run)
     runs-on: ubuntu-latest
     concurrency:
       group: joa-daily-sync
