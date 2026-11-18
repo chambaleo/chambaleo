@@ -6,7 +6,7 @@ import { validateVacancySubmission } from "../../lib/vacancyValidation";
 const RATE_WINDOW_MS = 60 * 60 * 1000;
 const RATE_LIMIT = 5;
 const submissionsByIp = new Map();
-const EXTERNAL_VACANCY_FIELDS = "id, company_name, job_title, location, work_mode, application_url";
+const EXTERNAL_VACANCY_FIELDS = "id, source, posted_at, company_name, job_title, location, work_mode, application_url";
 
 export const config = { api: { bodyParser: { sizeLimit: "2mb" } } };
 
@@ -30,6 +30,8 @@ function toPublicExternalVacancy(row) {
     work_mode: row.work_mode,
     application_method: "external_url",
     application_value: row.application_url,
+    published_at: row.posted_at,
+    source: row.source,
     is_vip: false,
   });
 }

@@ -6,3 +6,6 @@
 .cloudflare/
 
 /scripts/job-bot/output/
+/scripts/ai-job-bot/joa-state.json
+/scripts/ai-job-bot/joa-state.json.tmp
+/scripts/ai-job-bot/audit.jsonl

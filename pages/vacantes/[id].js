@@ -65,7 +65,7 @@ export default function JobDetails() {
             </section>
             <section className="detail-section">
               <h2>Sobre la vacante</h2>
-              <p>{job.description || `En ${job.company} buscamos personas con talento que quieran crecer y hacer la diferencia. Súmate a nuestro equipo y construyamos algo increíble.`}</p>
+              <p>{job.description || (job.dataAttribution ? "Consulta la publicación original para conocer todos los detalles." : `En ${job.company} buscamos personas con talento que quieran crecer y hacer la diferencia. Súmate a nuestro equipo y construyamos algo increíble.`)}</p>
             </section>
             <section className="detail-section">
               <h2>¿Qué harás?</h2>
@@ -76,7 +76,10 @@ export default function JobDetails() {
               {detailLines(job.requirements).length ? <ul>{detailLines(job.requirements).map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul> : <p>Consulta la descripción de la vacante para conocer los requisitos.</p>}
             </section>
             {job.benefits && <section className="detail-section"><h2>Beneficios</h2><p>{job.benefits}</p></section>}
-            <div className="detail-disclaimer">Vacante revisada por Chambaleo. Las condiciones y el proceso de selección son responsabilidad de la empresa que publica.</div>
+            <div className="detail-disclaimer">
+              Vacante revisada por Chambaleo. Las condiciones y el proceso de selección son responsabilidad de la empresa que publica.
+              {job.dataAttribution && <> <a href={job.dataAttribution.url} target="_blank" rel="noreferrer">{job.dataAttribution.text}</a></>}
+            </div>
           </article>
           <aside className="detail-sidebar">
             <div className="apply-card">

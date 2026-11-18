@@ -1,0 +1,32 @@
+[
+  {"company":"Nubank","ats":"ashby","permission":"pending","enabled":false},
+  {"company":"Nelo","ats":"ashby","permission":"pending","enabled":false},
+  {"company":"ARQ","ats":"ashby","permission":"pending","enabled":false},
+  {"company":"Truelogic","ats":"ashby","permission":"pending","enabled":false},
+  {"company":"CEMEX","ats":"other","permission":"pending","enabled":false},
+  {"company":"Unilever","ats":"other","permission":"pending","enabled":false},
+  {"company":"Accenture","ats":"other","permission":"pending","enabled":false},
+  {"company":"Amazon Mexico","ats":"other","permission":"pending","enabled":false},
+  {"company":"Mercado Libre","ats":"other","permission":"pending","enabled":false},
+  {"company":"Bitso","ats":"other","permission":"pending","enabled":false},
+  {
+    "company":"Job Opportunities API",
+    "ats":"joa",
+    "permission":"approved",
+    "enabled":true,
+    "sourceUrl":"https://api.jobopportunitiesapi.org/v1/jobs",
+    "authorizationRecord":{
+      "type":"commercial-terms",
+      "termsUrl":"https://jobopportunitiesapi.org/terms",
+      "termsLastUpdated":"2026-11-16",
+      "verifiedAt":"2026-11-18",
+      "commercialDisplay":true,
+      "storage":true,
+      "attribution":{
+        "text":"Data: Job Opportunities API",
+        "url":"https://jobopportunitiesapi.org"
+      }
+    },
+    "rights":{"shortDescription":false}
+  }
+]
