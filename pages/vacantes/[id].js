@@ -45,12 +45,13 @@ export async function getServerSideProps({ params, res }) {
         manual.description && manual.published_at &&
         manual.city && manual.company_name && manual.job_title
       );
+      job.jobPostingEligible = job.seoEligible;
       return { props: { job } };
     }
 
     const { data: external, error: externalError } = await db
       .from("external_vacancies")
-      .select("id,source,posted_at,company_name,job_title,location,work_mode,application_url")
+      .select("id,source,posted_at,company_name,job_title,location,work_mode,application_url,description")
       .eq("id", id)
       .eq("is_active", true)
       .maybeSingle();
@@ -73,6 +74,7 @@ export async function getServerSideProps({ params, res }) {
       source: external.source,
       company_name: external.company_name,
       job_title: external.job_title,
+      description: external.description,
       city: external.location,
       work_mode: external.work_mode,
       application_method: "external_url",
@@ -81,7 +83,18 @@ export async function getServerSideProps({ params, res }) {
       is_vip: false,
     });
 
-    job.seoEligible = false;
+    job.datePosted = external.posted_at || null;
+    job.seoCity = external.location || null;
+    job.seoState = null;
+    job.seoEligible = Boolean(
+      external.source?.startsWith("greenhouse:") &&
+      external.description?.trim().length >= 80 &&
+      external.company_name && external.job_title &&
+      external.location && validUrl
+    );
+    job.jobPostingEligible = Boolean(
+      job.seoEligible && external.posted_at
+    );
     return { props: { job } };
   } catch (error) {
     console.error("Job SSR failed:", error.message);
@@ -106,7 +119,7 @@ export default function JobDetails({ job }) {
       )).slice(0, 155)
     : "Explora empleos disponibles en México.";
 
-  const schema = job?.seoEligible ? {
+  const schema = job?.jobPostingEligible ? {
     "@context": "https://schema.org",
     "@type": "JobPosting",
     title: job.title,

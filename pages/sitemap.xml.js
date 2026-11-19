@@ -23,6 +23,38 @@ export async function getServerSideProps({ res }) {
       if (!data || data.length < 500) break;
     }
 
+    // Index only active external jobs with substantial descriptions.
+    for (let offset = 0; ; offset += 500) {
+      const { data, error } = await db
+        .from("external_vacancies")
+        .select("id,source,description,company_name,job_title,location,application_url")
+        .eq("is_active", true)
+        .like("source", "greenhouse:%")
+        .order("id", { ascending: true })
+        .range(offset, offset + 499);
+
+      if (error) throw error;
+
+      for (const row of data || []) {
+        let validUrl = false;
+        try {
+          const url = new URL(row.application_url);
+          validUrl = url.protocol === "https:" &&
+            Boolean(url.hostname) && !url.username && !url.password;
+        } catch {}
+
+        if (
+          row.id && row.description?.trim().length >= 80 &&
+          row.company_name && row.job_title &&
+          row.location && validUrl
+        ) {
+          ids.add(String(row.id));
+        }
+      }
+
+      if (!data || data.length < 500) break;
+    }
+
     const urls = [BASE + "/"];
     for (const id of ids) {
       urls.push(BASE + "/vacantes/" + encodeURIComponent(id));
