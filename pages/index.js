@@ -1,3 +1,4 @@
+import Head from "next/head";
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
@@ -106,6 +107,22 @@ export default function Home() {
 
   return (
     <>
+      <Head>
+        <title>Empleos y vacantes en México | Chambaleo</title>
+        <meta
+          name="description"
+          content="Encuentra empleos y vacantes en México. Explora oportunidades laborales por empresa, ciudad y modalidad. Busca tu próximo trabajo en Chambaleo."
+        />
+        <link rel="canonical" href="https://chambaleo.net/" />
+        <meta property="og:type" content="website" />
+        <meta property="og:title" content="Empleos y vacantes en México | Chambaleo" />
+        <meta
+          property="og:description"
+          content="Explora ofertas de empleo en México y encuentra tu próxima oportunidad laboral."
+        />
+        <meta property="og:url" content="https://chambaleo.net/" />
+        <meta name="robots" content="index,follow" />
+      </Head>
       <header className="site-header">
         <div className="header-inner">
           <Logo />
