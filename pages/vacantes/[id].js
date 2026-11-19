@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import Head from "next/head";
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { getSupabaseAdmin } from "../../lib/supabaseServer";
+import { isUnexpired, toPublicVacancy } from "../../lib/vacancyData";
 
 function Logo() {
   return <Link className="brand" href="/" aria-label="Chambaleo, inicio"><span className="brand-mark" aria-hidden="true"><svg viewBox="0 0 36 36" fill="none"><path d="M27.3 8.6a13 13 0 1 0 0 18.8" stroke="currentColor" strokeWidth="5.5" strokeLinecap="round" /><path d="m20 13 6 5-6 5" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round" /></svg></span><span>chambaleo<span className="brand-period">.</span></span></Link>;
@@ -18,26 +19,121 @@ function detailLines(value) {
   return typeof value === "string" ? value.split(/\r?\n/).map((line) => line.trim()).filter(Boolean) : [];
 }
 
-export default function JobDetails() {
-  const router = useRouter();
-  const [job, setJob] = useState(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!router.isReady || !router.query.id) return;
-    let active = true;
-    fetch(`/api/vacantes?id=${encodeURIComponent(router.query.id)}`)
-      .then(async (response) => {
-        if (!response.ok) throw new Error("Vacante no disponible");
-        return response.json();
-      })
-      .then((vacancy) => { if (active) setJob(vacancy); })
-      .catch(() => { if (active) setJob(null); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [router.isReady, router.query.id]);
+export async function getServerSideProps({ params, res }) {
+  try {
+    const db = getSupabaseAdmin();
+    const id = String(params.id);
+    const now = new Date().toISOString();
 
-  if (!router.isReady || loading) return null;
+    const { data: manual, error: manualError } = await db
+      .from("vacancies")
+      .select("*")
+      .eq("id", id)
+      .eq("status", "approved")
+      .or("expires_at.is.null,expires_at.gt." + now)
+      .maybeSingle();
+
+    if (manualError) throw manualError;
+
+    if (manual && isUnexpired(manual)) {
+      const job = toPublicVacancy(manual);
+      job.datePosted = manual.published_at || null;
+      job.seoCity = manual.city || null;
+      job.seoState = manual.state || null;
+      job.seoEligible = Boolean(
+        manual.description && manual.published_at &&
+        manual.city && manual.company_name && manual.job_title
+      );
+      return { props: { job } };
+    }
+
+    const { data: external, error: externalError } = await db
+      .from("external_vacancies")
+      .select("id,source,posted_at,company_name,job_title,location,work_mode,application_url")
+      .eq("id", id)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (externalError) throw externalError;
+
+    if (!external) return { notFound: true };
+
+    let validUrl = false;
+    try {
+      const url = new URL(external.application_url);
+      validUrl = url.protocol === "https:" &&
+        !url.username && !url.password;
+    } catch {}
+
+    if (!validUrl) return { notFound: true };
+
+    const job = toPublicVacancy({
+      id: external.id,
+      source: external.source,
+      company_name: external.company_name,
+      job_title: external.job_title,
+      city: external.location,
+      work_mode: external.work_mode,
+      application_method: "external_url",
+      application_value: external.application_url,
+      published_at: external.posted_at,
+      is_vip: false,
+    });
+
+    job.seoEligible = false;
+    return { props: { job } };
+  } catch (error) {
+    console.error("Job SSR failed:", error.message);
+    res.statusCode = 503;
+    return { props: { job: null } };
+  }
+}
+
+export default function JobDetails({ job }) {
+  const canonical = job
+    ? "https://chambaleo.net/vacantes/" + encodeURIComponent(job.id)
+    : "https://chambaleo.net/";
+
+  const title = job
+    ? job.title + " en " + job.company + " | Chambaleo"
+    : "Vacante no disponible | Chambaleo";
+
+  const description = job
+    ? (job.description || (
+        "Encuentra la vacante de " + job.title +
+        " en " + job.company + ", " + job.city + "."
+      )).slice(0, 155)
+    : "Explora empleos disponibles en México.";
+
+  const schema = job?.seoEligible ? {
+    "@context": "https://schema.org",
+    "@type": "JobPosting",
+    title: job.title,
+    description: "<p>" + String(job.description)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\\n/g, "<br/>") + "</p>",
+    datePosted: job.datePosted,
+    hiringOrganization: {
+      "@type": "Organization",
+      name: job.company
+    },
+    jobLocation: {
+      "@type": "Place",
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: job.seoCity,
+        ...(job.seoState
+          ? { addressRegion: job.seoState }
+          : {}),
+        addressCountry: "MX"
+      }
+    },
+    url: canonical
+  } : null;
+
   if (!job) {
     return (
       <div className="not-found-page">
@@ -49,6 +145,22 @@ export default function JobDetails() {
 
   return (
     <>
+      <Head>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={canonical} />
+        {!job.seoEligible && (
+          <meta name="robots" content="noindex,follow" />
+        )}
+        {schema && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(schema).replace(/</g, "\\u003c")
+            }}
+          />
+        )}
+      </Head>
       <header className="site-header"><div className="header-inner"><Logo /><nav className="header-nav" aria-label="Navegación principal"><Link className="nav-link" href="/">Explorar empleos</Link><Link className="post-link" href="/publicar-vacante">Publicar vacante <span>→</span></Link></nav></div></header>
       <main className="detail-page">
         <Link className="back-link" href="/">← <span>Volver a vacantes</span></Link>
