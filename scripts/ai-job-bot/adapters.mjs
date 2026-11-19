@@ -45,31 +45,72 @@ async function getJson(fetchImpl, url) {
   }
 }
 
+
 async function getJoaJson(fetchImpl, url, key) {
-  const response = await fetchImpl(url, {
-    signal: AbortSignal.timeout(20000),
-    headers: {
-      Accept: "application/json",
-      Authorization: `Bearer ${key}`,
-    },
-  });
-  if (!response.ok) {
-    let detail = "";
-    try {
-      const body = await response.json();
-      detail = body?.error || body?.message || "";
-    } catch {
-      // The HTTP status remains useful when the provider returns no JSON body.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const response = await fetchImpl(url, {
+      signal: AbortSignal.timeout(20000),
+      headers: {
+        Accept: "application/json",
+        Authorization: "Bearer " + key,
+      },
+    });
+
+    if (response.ok) {
+      try {
+        return {
+          body: await response.json(),
+          headers: response.headers,
+        };
+      } catch {
+        throw new Error("JOA API returned invalid JSON");
+      }
     }
+
+    let detail = "";
+    let payload = {};
+
+    try {
+      payload = await response.json();
+      detail = String(payload?.error || payload?.message || "");
+    } catch {}
+
     const retryAfter = response.headers?.get?.("Retry-After");
-    const quota = response.status === 402 ? " (monthly record quota exhausted)" : "";
-    const retry = retryAfter ? `; retry after ${retryAfter}s` : "";
-    throw new Error(`JOA API HTTP ${response.status}${detail ? ` ${detail}` : ""}${quota}${retry}`);
-  }
-  try {
-    return { body: await response.json(), headers: response.headers };
-  } catch {
-    throw new Error("JOA API returned invalid JSON");
+
+    if (response.status === 429 && attempt < 3) {
+      const seconds = Number(retryAfter);
+      const date = retryAfter ? Date.parse(retryAfter) : NaN;
+      const match = detail.match(/retry\s+after\s+(\d+)\s*s/i);
+
+      let delay = 35 * (attempt + 1);
+
+      if (retryAfter && Number.isFinite(seconds)) {
+        delay = seconds + 3;
+      } else if (Number.isFinite(date)) {
+        delay = Math.ceil((date - Date.now()) / 1000) + 3;
+      } else if (match) {
+        delay = Number(match[1]) + 3;
+      }
+
+      delay = Math.min(180, Math.max(2, delay));
+
+      console.log(
+        "JOA HTTP 429: waiting " + delay +
+        "s before retry " + (attempt + 1) + "/3"
+      );
+
+      await new Promise(
+        resolve => setTimeout(resolve, delay * 1000)
+      );
+      continue;
+    }
+
+    throw new Error(
+      "JOA API HTTP " + response.status +
+      (detail ? " " + detail : "") +
+      (response.status === 402 ? " quota exhausted" : "") +
+      (retryAfter ? "; retry after " + retryAfter : "")
+    );
   }
 }
 
@@ -139,10 +180,8 @@ export async function fetchJoaExitFeeds(fetchImpl = fetch, {
   if (!Number.isInteger(limit) || limit < 1 || limit > 10000) {
     throw new Error("JOA expiration page size must be from 1 to 10000");
   }
-  const [expired, withdrawn] = await Promise.all([
-    fetchJoaExitFeed(fetchImpl, "expired", expiredSince, key.trim(), limit),
-    fetchJoaExitFeed(fetchImpl, "withdrawn", withdrawnSince, key.trim(), limit),
-  ]);
+  const expired = await fetchJoaExitFeed(fetchImpl, "expired", expiredSince, key.trim(), limit);
+  const withdrawn = await fetchJoaExitFeed(fetchImpl, "withdrawn", withdrawnSince, key.trim(), limit);
   return { expired, withdrawn };
 }
 

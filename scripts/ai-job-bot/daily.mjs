@@ -64,12 +64,6 @@ export async function runDailyJoaSync({
     withdrawnSince: state.withdrawn_since,
   });
   const exitIds = [...new Set([...feeds.expired.ids, ...feeds.withdrawn.ids])];
-  if (write) {
-    await deactivateJobs(database, exitIds);
-    state.expired_since = feeds.expired.nextSince;
-    state.withdrawn_since = feeds.withdrawn.nextSince;
-    await writeJoaSyncState(database, state);
-  }
 
   const existing = await readExistingVacancies(database);
   const activeCount = existing.uniqueCount;
@@ -123,6 +117,9 @@ export async function runDailyJoaSync({
 
   if (write) {
     await writeJobs(database, uniqueJobs);
+    await deactivateJobs(database, exitIds);
+    state.expired_since = feeds.expired.nextSince;
+    state.withdrawn_since = feeds.withdrawn.nextSince;
     if (fetched.quota.budget > 0) {
       state.listing_since = fetched.hasMore ? state.listing_since : startedAt;
       state.listing_cursor = fetched.hasMore ? fetched.nextCursor : null;
