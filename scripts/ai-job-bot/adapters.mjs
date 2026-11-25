@@ -9,7 +9,7 @@ const JOA_MAX_PAGE_SIZE = 200;
 
 function getBoardName(source) {
   const expectedHost = ATS_HOSTS[source.ats];
-  if (!expectedHost) throw new Error(Unsupported ATS: ${source.ats});
+  if (!expectedHost) throw new Error("Unsupported ATS: " + source.ats);
 
   let url;
   try {
@@ -25,7 +25,7 @@ function getBoardName(source) {
     url.search ||
     url.hash
   ) {
-    throw new Error(Source URL must be an HTTPS ${expectedHost} board URL);
+    throw new Error("Source URL must be an HTTPS " + expectedHost + " board URL");
   }
   const parts = url.pathname.split("/").filter(Boolean);
   if (parts.length !== 1) throw new Error("Source URL must identify one ATS board");
@@ -37,7 +37,7 @@ async function getJson(fetchImpl, url) {
     signal: AbortSignal.timeout(20000),
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error(HTTP ${response.status});
+  if (!response.ok) throw new Error("HTTP " + response.status);
   try {
     return await response.json();
   } catch {
@@ -122,13 +122,13 @@ async function getJoaJson(fetchImpl, url, key) {
 }
 
 function assertJoaSource(source) {
-  if (source.ats !== "joa" || source.sourceUrl !== ${JOA_API}/v1/jobs) {
+  if (source.ats !== "joa" || source.sourceUrl !== JOA_API + "/v1/jobs") {
     throw new Error("JOA source URL or adapter type is invalid");
   }
 }
 
 async function getJoaEstimate(fetchImpl, key) {
-  const url = new URL(${JOA_API}/v1/me/export-estimate);
+  const url = new URL(JOA_API + "/v1/me/export-estimate");
   url.searchParams.set("country", "MX");
   url.searchParams.set("source_type", "ats,career_site");
   const { body: estimate } = await getJoaJson(fetchImpl, url, key);
@@ -149,25 +149,25 @@ async function fetchJoaExitFeed(fetchImpl, kind, initialSince, key, limit) {
   const ids = new Set();
   let since = initialSince;
   for (;;) {
-    const url = new URL(${JOA_API}/v1/jobs/${kind});
+    const url = new URL(JOA_API + "/v1/jobs/" + kind);
     if (kind === "withdrawn") url.searchParams.set("country", "MX");
     url.searchParams.set("limit", String(limit));
     url.searchParams.set("since", since);
     const { body: page } = await getJoaJson(fetchImpl, url, key);
     if (!Array.isArray(page?.data) || !Number.isInteger(page.count) || typeof page.next_since !== "string") {
-      throw new Error(JOA ${kind} feed returned an invalid page);
+      throw new Error("JOA " + kind + " feed returned an invalid page");
     }
     if (page.count !== page.data.length || page.data.length > limit) {
-      throw new Error(JOA ${kind} feed count did not match its page);
+      throw new Error("JOA " + kind + " feed count did not match its page");
     }
     for (const row of page.data) {
       if (typeof row?.id !== "string" || !row.id.trim()) {
-        throw new Error(JOA ${kind} feed returned an invalid job id);
+        throw new Error("JOA " + kind + " feed returned an invalid job id");
       }
       ids.add(row.id);
     }
     if (page.count < limit) return { ids: [...ids], nextSince: page.next_since };
-    if (page.next_since === since) throw new Error(JOA ${kind} feed repeated its pagination cursor);
+    if (page.next_since === since) throw new Error("JOA " + kind + " feed repeated its pagination cursor");
     since = page.next_since;
   }
 }
@@ -201,7 +201,7 @@ export function calculateJoaBudget({
   reserve = 100,
 }) {
   for (const [label, value] of Object.entries({ maxRecords, quotaUsed, monthlyLimit, reserve })) {
-    if (!Number.isInteger(value) || value < 0) throw new Error(JOA ${label} must be a non-negative integer);
+    if (!Number.isInteger(value) || value < 0) throw new Error("JOA " + label + " must be a non-negative integer");
   }
   if (maxRecords < 1 || monthlyLimit < 1 || reserve >= monthlyLimit) {
     throw new Error("JOA record limits are invalid");
@@ -248,7 +248,7 @@ async function fetchJoaJobs(fetchImpl, source, {
 
   while (jobs.length < budget) {
     const pageSize = Math.min(JOA_MAX_PAGE_SIZE, budget - jobs.length);
-    const url = new URL(${JOA_API}/v1/jobs);
+    const url = new URL(JOA_API + "/v1/jobs");
     url.searchParams.set("country", "MX");
     url.searchParams.set("status", "live");
     url.searchParams.set("source_type", "ats,career_site");
@@ -294,7 +294,7 @@ async function fetchJoaJobs(fetchImpl, source, {
 }
 
 function validateJobs(jobs, company) {
-  if (!Array.isArray(jobs)) throw new Error(${company}: invalid jobs response);
+  if (!Array.isArray(jobs)) throw new Error(company + ": invalid jobs response");
   return jobs;
 }
 
@@ -304,7 +304,7 @@ function greenhouseAdapter(fetchImpl) {
       const board = getBoardName(source);
       const data = await getJson(
         fetchImpl,
-        https://boards-api.greenhouse.io/v1/boards/${encodeURIComponent(board)}/jobs,
+        "https://boards-api.greenhouse.io/v1/boards/" + encodeURIComponent(board) + "/jobs",
       );
       return validateJobs(data?.jobs, source.company);
     },
@@ -318,14 +318,14 @@ function leverAdapter(fetchImpl) {
       const jobs = [];
       const ids = new Set();
       for (let offset = 0; ; ) {
-        const url = new URL(https://api.lever.co/v0/postings/${encodeURIComponent(board)});
+        const url = new URL("https://api.lever.co/v0/postings/" + encodeURIComponent(board));
         url.searchParams.set("mode", "json");
         url.searchParams.set("limit", "100");
         url.searchParams.set("skip", String(offset));
         const page = validateJobs(await getJson(fetchImpl, url), source.company);
         for (const job of page) {
           if (job?.id == null || ids.has(String(job.id))) {
-            throw new Error(${source.company}: missing or repeated Lever job ID);
+            throw new Error(source.company + ": missing or repeated Lever job ID");
           }
           ids.add(String(job.id));
         }
@@ -341,7 +341,7 @@ function ashbyAdapter(fetchImpl) {
   return {
     async fetch(source) {
       const board = getBoardName(source);
-      const url = https://api.ashbyhq.com/posting-api/job-board/${encodeURIComponent(board)}?includeCompensation=false;
+      const url = "https://api.ashbyhq.com/posting-api/job-board/" + encodeURIComponent(board) + "?includeCompensation=false";
       const data = await getJson(fetchImpl, url);
       return validateJobs(data?.jobs, source.company);
     },
