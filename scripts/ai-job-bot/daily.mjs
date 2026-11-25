@@ -152,11 +152,18 @@ export async function runDailyJoaSync({
     hasMore: fetched.hasMore,
     lastSuccessfulRun: state.last_successful_run,
   };
+
   console.log(
-    `JOA ${result.status}: active=${activeCount}, received=${result.fetched}, unique=${result.unique}, ` +
-    `exit IDs=${exitIds.length}, record budget=${fetched.quota.budget}, ` +
-    remaining before listing fetch=${fetched.quota.remaining ?? "not checked"}.,
+    "JOA " + result.status +
+    ": active=" + activeCount +
+    ", received=" + result.fetched +
+    ", unique=" + result.unique +
+    ", exit IDs=" + exitIds.length +
+    ", record budget=" + fetched.quota.budget +
+    ", remaining before listing fetch=" +
+    (fetched.quota.remaining ?? "not checked") + "."
   );
+
   if (!write) console.log("DRY RUN: no JOA rows, cursors, or quota state were written to Supabase.");
   return result;
 }
